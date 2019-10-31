@@ -24,7 +24,10 @@ def run(
         thresholds=[0.6],
         output=None,
         join='inner',
-        ticker=None
+        ticker=None,
+        training_file=None #this should be a json file.
+        #TODO: add a field that I can pass in here so that that includes list of training files: [trainingmatches1.csv,trainingmatches2.csv,...]
+        #this field will need to be in the **kwargs syntax and have a default value in case files arent passed in i.e training_files=None
     ):
     fields1 = fields1 if fields1 else headers1
     fields2 = fields2 if fields2 else headers2
@@ -48,7 +51,7 @@ def run(
     processed1 = list(process(extracted1, processes))
     processed2 = list(process(extracted2, processes))
     tick = ticker('Matching', len(processed1) * len(processed2)) if ticker and 'bilenko' not in methods else None
-    matcher = build(methods, thresholds, fields1, fields2, tick)
+    matcher = build(methods, thresholds, fields1, fields2, tick,training_file)##PASS TRAINING FILE IN.
     matches = matcher(processed1, processed2)
     outputs = format(output, headers1, headers2, fields1, fields2)
     results = connect(join, data1, headers1, data2, headers2, list(matches), outputs)
@@ -92,12 +95,12 @@ def process_ignore_titles(ignore_case):
     titles = [line[:-1] for line in io.open(filename)]
     return process_ignore_custom(titles, ignore_case)
 
-def build(methods, thresholds, fields1, fields2, tick):
+def build(methods, thresholds, fields1, fields2, tick,training_file):
     if 'bilenko' in methods and len(methods) > 1:
         raise Exception('bilenko compares whole rows so cannot be combined with other methods')
     if methods[0] == 'bilenko':
         import fuzzybilenko
-        return fuzzybilenko.setup(fields1, fields2)
+        return fuzzybilenko.setup(fields1, fields2,training_file) #TODO: ADD ANOTHER FIELD HERE TO PASS IN THE LIST OF PRE-TRAINING MATCHES. THIS FIELD WILL COME FROM THE **KWARGS PASSED INTO CSVMATCH.RUN()
     matchers = []
     for i, (field1, field2) in enumerate(zip(fields1, fields2)):
         method = methods[i] if len(methods) >= i + 1 else methods[-1]
